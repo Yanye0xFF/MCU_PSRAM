@@ -7,7 +7,7 @@
 #include "drv_psram.h"
 
 // 作为cache的SRAM物理基地址
-// 20000000 + A000
+// 0x20000000 + A000 物理RAM最后8KB
 #define CACHE_BASE    (0x2000A000u)
 
 // 作为cache的SRAM大小(KB)
@@ -16,7 +16,7 @@
 // PSRAM大小(KB)
 #define PSRAM_SIZE    8192
 
-// cache页小于等于PSRAM物理页大小，LY68L6400 Page size is 1K
+// cache逻辑页大小等于PSRAM逻辑页大小，且小于等于PSRAM物理页大小，LY68L6400 Page size is 1K
 // unit: byte
 #define PAGE_SIZE         1024
 
@@ -43,7 +43,7 @@ static rt_device_t psram_dev;
 int page_init(void) {
     psram_dev = rt_device_find("psram");
     if(psram_dev == RT_NULL) {
-        LOG_E("probe psram device fail.\n");
+        LOG_E("probe psram device fail.");
         return -1;
     }
 
@@ -51,11 +51,11 @@ int page_init(void) {
     if(-RT_EIO == err) {
         // switch to spi mode
         rt_device_control(psram_dev, PSRAM_CMD_SWITCH_TO_SPI_MODE, RT_NULL);
-        LOG_I("switch to spi mode\n");
+        LOG_I("switch to spi mode");
     }
     err = rt_device_open(psram_dev, RT_DEVICE_FLAG_RDWR);
     if(RT_EOK != err) {
-        LOG_E("psram device open fail: %d\n", err);
+        LOG_E("psram device open fail: %d", err);
         return -1;
     }
 
@@ -166,7 +166,7 @@ void page_save_into_psram(uint8_t cpage, uint16_t ppage) {
 }
 
 /**
- * @brief 虚拟地址和物理地址转换
+ * @brief 虚拟地址和物理地址转换，只能映射1KB
  * @note 返回的物理地址在当前页范围内可以直接随机访问，跨页访问需要手动换页或使用psram_*read/psram_*write访问
  *       如果使用物理地址直接随机访问且修改了内存数据，需要调用page_mark_dirty标记脏页，以便在交换时回写到PSRAM
  * @param vaddr 虚拟地址 0x0~0x7FFFFF

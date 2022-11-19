@@ -1,6 +1,6 @@
 /*
  * drv_psram.c
- * @brief
+ * @brief is_16bit 可不配置
  * Created on: Sep 24, 2022
  * Author: Yanye
  */
@@ -95,7 +95,6 @@ rt_err_t psram_init(rt_device_t dev) {
     message.cs_take = 1;
     message.cs_release = 1;
     message.qspi_mode = 0;
-    message.is_16bit = 0;
 
     // Reset Enable CMD(‘h66)
     init_xfer_buffer[0] = LY68L64_RSTEN;
@@ -172,7 +171,6 @@ rt_err_t psram_init(rt_device_t dev) {
     message.next = RT_NULL;
     message.cs_take = 1;
     message.cs_release = 1;
-    message.is_16bit = 0;
 
     init_xfer_buffer[0] = LY68L64_QUAD_MODE_ENTER;
 #if (GD_USE_FAST_QSPI)
@@ -215,7 +213,6 @@ rt_size_t psram_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size
     message.cs_take = 1;
     message.cs_release = 0;
     message.qspi_mode = 1;
-    message.is_16bit = 0;
     // send 8bit cmd & 24bit address + 6 clk
 #if (GD_USE_FAST_QSPI)
     fast_qspi_xfer(&message);
@@ -252,7 +249,6 @@ rt_size_t psram_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size
     message.cs_take = 1;
     message.cs_release = 0;
     message.qspi_mode = 1;
-    message.is_16bit = 0;
 
     // endian_swap(header, message.length);
 
@@ -290,7 +286,6 @@ rt_err_t psram_control(rt_device_t dev, int cmd, void *args) {
         message.cs_take = 1;
         message.cs_release = 1;
         message.qspi_mode = 1;
-        message.is_16bit = 0;
 
         header[0] = LY68L64_QUAD_MODE_EXIT;
         #if (GD_USE_FAST_QSPI)

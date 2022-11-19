@@ -27,7 +27,11 @@
 // D0
 #define SPI0_MOSI_PIN    GPIO_PIN_7
 
-static const uint32_t RX_DUMMY_BYTE_ADDR = 0x0803FC00;
+// QSPI外设在读取时需要主机产生时钟，主机产生时钟的条件是要发送数据
+// 在DMA模式下RX_DUMMY_BYTE_ADDR作为TX通道的源地址
+// 0x0803F800这个位置的数据理论上不影响对QSPI外设数据的读取
+// RX_DUMMY_BYTE_ADDR需要是单片机有效的物理地址，这里定为单片机Flash最后一页
+static const uint32_t RX_DUMMY_BYTE_ADDR = 0x0803F800;
 
 static volatile uint8_t dma_rx_done;
 static volatile uint8_t dma_tx_done;
@@ -139,7 +143,9 @@ static uint8_t spi_bit_width_flag = 0x00;
 // default: none mode
 static uint8_t qspi_io_flag = 0xFF;
 
+// 单线SPI模式
 #define IO_FLAG_SPI_INOUT_MODE    0xFE
+// 四线SPI模式
 #define IO_FLAG_QPI_OUT_MODE     0xFD
 #define IO_FLAG_QPI_IN_MODE      0xFB
 
@@ -248,6 +254,10 @@ rt_uint32_t fast_qspi_xfer(struct rt_spi_message *message) {
                 qspi_io_flag = IO_FLAG_SPI_INOUT_MODE;
             }
         }
+        // 在DMA传输打开前清除传输完成位
+        dma_rx_done = 0;
+        dma_tx_done = 0;
+
         // dummy read to clear 'RBNE' flag
         *((uint32_t *)message->recv_buf) = SPI_DATA(SPI0);
 
@@ -264,9 +274,6 @@ rt_uint32_t fast_qspi_xfer(struct rt_spi_message *message) {
         // When the TBE or RBNE bit in SPI_STAT is set, it will
         // generate a DMA request at corresponding DMA channel.
         SPI_CTL1(SPI0) |= (SPI_CTL1_DMATEN | SPI_CTL1_DMAREN);
-
-        dma_rx_done = 0;
-        dma_tx_done = 0;
 
         while(!dma_tx_done) {};
 
@@ -294,12 +301,11 @@ rt_uint32_t fast_qspi_xfer(struct rt_spi_message *message) {
                 qspi_io_flag = IO_FLAG_SPI_INOUT_MODE;
             }
         }
+        dma_tx_done = 0;
 
         DMA_CHMADDR(DMA0, DMA_CH2) = (uint32_t)message->send_buf;
         DMA_CHCTL(DMA0, DMA_CH2) |= DMA_CHXCTL_CHEN;
         SPI_CTL1(SPI0) |= SPI_CTL1_DMATEN;
-
-        dma_tx_done = 0;
 
         while(!dma_tx_done) {};
 
